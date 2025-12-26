@@ -88,7 +88,7 @@ const HabitsScreen: React.FC = () => {
     <div className="habits-screen">
       <header className="screen-header">
         <h1>Habits</h1>
-        <button className="btn-icon" onClick={() => setShowAddForm(true)}>
+        <button type="button" className="btn-icon" onClick={() => setShowAddForm(true)}>
           <Plus size={24} />
         </button>
       </header>
