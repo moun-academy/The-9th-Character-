@@ -91,6 +91,87 @@ const HomeScreen: React.FC = () => {
 
   return (
     <div className="home-screen">
+      {/* 5 SECOND RULE HERO - THE MAIN FEATURE */}
+      <section className="five-second-rule-hero">
+        <div className="fsr-hero-card">
+          <div className="fsr-countdown">5</div>
+          <h1 className="fsr-title">Second Rule</h1>
+          <p className="fsr-mantra">I am always 5 seconds away from getting back to the straight line.</p>
+
+          <div className="fsr-action-buttons">
+            <button
+              type="button"
+              className="fsr-action-btn social"
+              onClick={() => handleFiveSecondRuleAction('social')}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowActionNote(showActionNote === 'social' ? null : 'social');
+              }}
+            >
+              <Users size={28} />
+              <span className="fsr-btn-label">Social</span>
+              <span className="fsr-btn-count">{fiveSecondRuleCounts.social}</span>
+            </button>
+
+            <button
+              type="button"
+              className="fsr-action-btn productivity"
+              onClick={() => handleFiveSecondRuleAction('productivity')}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowActionNote(showActionNote === 'productivity' ? null : 'productivity');
+              }}
+            >
+              <Zap size={28} />
+              <span className="fsr-btn-label">Productivity</span>
+              <span className="fsr-btn-count">{fiveSecondRuleCounts.productivity}</span>
+            </button>
+
+            <button
+              type="button"
+              className="fsr-action-btn presence"
+              onClick={() => handleFiveSecondRuleAction('presence')}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setShowActionNote(showActionNote === 'presence' ? null : 'presence');
+              }}
+            >
+              <Brain size={28} />
+              <span className="fsr-btn-label">Presence</span>
+              <span className="fsr-btn-count">{fiveSecondRuleCounts.presence}</span>
+            </button>
+          </div>
+
+          {showActionNote && (
+            <div className="action-note-container">
+              <input
+                type="text"
+                placeholder={`Note for ${showActionNote} action...`}
+                value={actionNote}
+                onChange={(e) => setActionNote(e.target.value)}
+                className="action-note-input"
+              />
+              <button
+                type="button"
+                className="btn-small"
+                onClick={() => handleFiveSecondRuleAction(showActionNote as 'social' | 'productivity' | 'presence')}
+              >
+                Add with note
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Philosophy Section */}
+      <section className="philosophy-section">
+        <div className="philosophy-card">
+          <p className="philosophy-main">Enjoy the ride. This moment is all I have. Live it and embrace it.</p>
+          <p className="philosophy-rule">The 5 second rule is my path to living on my own terms, being in the driver seat, increasing confidence, and choosing presence.</p>
+          <p className="philosophy-reminder">Wherever I am, I am always 5 seconds away from getting back to the straight line.</p>
+        </div>
+      </section>
+
       {/* Identity Section */}
       <section className="identity-section">
         <div className="identity-card">
@@ -176,84 +257,6 @@ const HomeScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* Philosophy Section */}
-      <section className="philosophy-section">
-        <div className="philosophy-card">
-          <p className="philosophy-main">Enjoy the ride. This moment is all I have. Live it and embrace it.</p>
-          <p className="philosophy-rule">The 5 second rule is my path to living on my own terms, being in the driver seat, increasing confidence, and choosing presence.</p>
-          <p className="philosophy-reminder">Wherever I am, I am always 5 seconds away from getting back to the straight line.</p>
-        </div>
-      </section>
-
-      {/* 5 Second Rule Section */}
-      <section className="five-second-rule-section">
-        <h2>5 Second Rule Actions</h2>
-        <p className="section-subtitle">Tap to log an aligned action</p>
-
-        <div className="five-second-rule-buttons">
-          <button
-            type="button"
-            className="fsr-btn social"
-            onClick={() => handleFiveSecondRuleAction('social')}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setShowActionNote(showActionNote === 'social' ? null : 'social');
-            }}
-          >
-            <Users size={32} />
-            <span className="fsr-label">5SR Social</span>
-            <span className="fsr-count">{fiveSecondRuleCounts.social}</span>
-          </button>
-
-          <button
-            type="button"
-            className="fsr-btn productivity"
-            onClick={() => handleFiveSecondRuleAction('productivity')}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setShowActionNote(showActionNote === 'productivity' ? null : 'productivity');
-            }}
-          >
-            <Zap size={32} />
-            <span className="fsr-label">5SR Productivity</span>
-            <span className="fsr-count">{fiveSecondRuleCounts.productivity}</span>
-          </button>
-
-          <button
-            type="button"
-            className="fsr-btn presence"
-            onClick={() => handleFiveSecondRuleAction('presence')}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setShowActionNote(showActionNote === 'presence' ? null : 'presence');
-            }}
-          >
-            <Brain size={32} />
-            <span className="fsr-label">5SR Presence</span>
-            <span className="fsr-count">{fiveSecondRuleCounts.presence}</span>
-          </button>
-        </div>
-
-        {showActionNote && (
-          <div className="action-note-container">
-            <input
-              type="text"
-              placeholder={`Note for ${showActionNote} action...`}
-              value={actionNote}
-              onChange={(e) => setActionNote(e.target.value)}
-              className="action-note-input"
-            />
-            <button
-              type="button"
-              className="btn-small"
-              onClick={() => handleFiveSecondRuleAction(showActionNote as 'social' | 'productivity' | 'presence')}
-            >
-              Add with note
-            </button>
-          </div>
-        )}
-      </section>
-
       {/* Daily Scores Section */}
       <section className="scores-section">
         <h2>Daily Scores</h2>
@@ -314,7 +317,7 @@ const HomeScreen: React.FC = () => {
           <div className="score-card">
             <div className="score-header">
               <Clock size={24} />
-              <span>Deep Work Sets</span>
+              <span>Deep Work</span>
             </div>
             <div className="score-controls">
               <button
