@@ -40,7 +40,17 @@ const ProtectedLayout: React.FC = () => {
 };
 
 const AppRoutes: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Show loading screen while checking auth state
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <Routes>
@@ -55,6 +65,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/progress" element={<ProgressScreen />} />
         <Route path="/settings" element={<SettingsScreen />} />
       </Route>
+      {/* Catch all - redirect to home or login */}
+      <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>
   );
 };
