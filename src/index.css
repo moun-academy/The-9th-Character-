@@ -49,4 +49,11 @@ body {
 /* Ensure clickable elements are clickable */
 a, button, input, select, textarea {
   touch-action: manipulation;
+  pointer-events: auto;
+}
+
+/* Ensure buttons are always interactive */
+button {
+  position: relative;
+  z-index: 1;
 }
