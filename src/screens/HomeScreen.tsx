@@ -121,6 +121,7 @@ const HomeScreen: React.FC = () => {
             ) : (
               <div className="vote-buttons">
                 <button
+                  type="button"
                   className="vote-btn yes"
                   onClick={() => handleVote('yes')}
                 >
@@ -128,6 +129,7 @@ const HomeScreen: React.FC = () => {
                   Yes
                 </button>
                 <button
+                  type="button"
                   className="vote-btn no"
                   onClick={() => handleVote('no')}
                 >
@@ -139,6 +141,7 @@ const HomeScreen: React.FC = () => {
 
             {!todayVote && (
               <button
+                type="button"
                 className="btn-text"
                 onClick={() => setShowVoteNote(!showVoteNote)}
               >
@@ -189,6 +192,7 @@ const HomeScreen: React.FC = () => {
 
         <div className="five-second-rule-buttons">
           <button
+            type="button"
             className="fsr-btn social"
             onClick={() => handleFiveSecondRuleAction('social')}
             onContextMenu={(e) => {
@@ -202,6 +206,7 @@ const HomeScreen: React.FC = () => {
           </button>
 
           <button
+            type="button"
             className="fsr-btn productivity"
             onClick={() => handleFiveSecondRuleAction('productivity')}
             onContextMenu={(e) => {
@@ -215,6 +220,7 @@ const HomeScreen: React.FC = () => {
           </button>
 
           <button
+            type="button"
             className="fsr-btn presence"
             onClick={() => handleFiveSecondRuleAction('presence')}
             onContextMenu={(e) => {
@@ -238,6 +244,7 @@ const HomeScreen: React.FC = () => {
               className="action-note-input"
             />
             <button
+              type="button"
               className="btn-small"
               onClick={() => handleFiveSecondRuleAction(showActionNote as 'social' | 'productivity' | 'presence')}
             >
@@ -259,6 +266,7 @@ const HomeScreen: React.FC = () => {
             </div>
             <div className="score-controls">
               <button
+                type="button"
                 className="score-btn"
                 onClick={() => handleScoreChange('presence', -1)}
                 disabled={!todayEntry?.presenceScore || todayEntry.presenceScore <= 1}
@@ -267,6 +275,7 @@ const HomeScreen: React.FC = () => {
               </button>
               <span className="score-value">{todayEntry?.presenceScore || '-'}</span>
               <button
+                type="button"
                 className="score-btn"
                 onClick={() => handleScoreChange('presence', 1)}
                 disabled={todayEntry?.presenceScore === 10}
@@ -283,6 +292,7 @@ const HomeScreen: React.FC = () => {
             </div>
             <div className="score-controls">
               <button
+                type="button"
                 className="score-btn"
                 onClick={() => handleScoreChange('productivity', -1)}
                 disabled={!todayEntry?.productivityScore || todayEntry.productivityScore <= 1}
@@ -291,6 +301,7 @@ const HomeScreen: React.FC = () => {
               </button>
               <span className="score-value">{todayEntry?.productivityScore || '-'}</span>
               <button
+                type="button"
                 className="score-btn"
                 onClick={() => handleScoreChange('productivity', 1)}
                 disabled={todayEntry?.productivityScore === 10}
@@ -307,6 +318,7 @@ const HomeScreen: React.FC = () => {
             </div>
             <div className="score-controls">
               <button
+                type="button"
                 className="score-btn"
                 onClick={() => handleSetsChange(-1)}
                 disabled={!todayEntry?.deepWorkSets || todayEntry.deepWorkSets <= 0}
@@ -315,6 +327,7 @@ const HomeScreen: React.FC = () => {
               </button>
               <span className="score-value">{todayEntry?.deepWorkSets || 0}</span>
               <button
+                type="button"
                 className="score-btn"
                 onClick={() => handleSetsChange(1)}
               >

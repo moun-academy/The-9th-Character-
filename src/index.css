@@ -6,15 +6,15 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Disable text selection on buttons for mobile */
+/* Button base styles - ensure clicks work */
 button {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-}
-
-/* Remove default button styling */
-button {
   font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* Smooth scrolling */
@@ -28,9 +28,11 @@ html {
   background: transparent;
 }
 
-/* Prevent overscroll on iOS */
+/* Body reset */
 body {
   overscroll-behavior: none;
+  margin: 0;
+  padding: 0;
 }
 
 /* Focus visible for accessibility */
@@ -42,4 +44,9 @@ body {
 /* Remove focus outline for mouse users */
 :focus:not(:focus-visible) {
   outline: none;
+}
+
+/* Ensure clickable elements are clickable */
+a, button, input, select, textarea {
+  touch-action: manipulation;
 }
