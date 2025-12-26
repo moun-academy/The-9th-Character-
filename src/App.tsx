@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import LoginScreen from './screens/LoginScreen';
@@ -11,7 +11,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import Navigation from './components/Navigation';
 import './App.css';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProtectedLayout: React.FC = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -27,7 +27,16 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <DataProvider>
+      <div className="app-container">
+        <main className="main-content">
+          <Outlet />
+        </main>
+        <Navigation />
+      </div>
+    </DataProvider>
+  );
 };
 
 const AppRoutes: React.FC = () => {
@@ -39,81 +48,13 @@ const AppRoutes: React.FC = () => {
         path="/login"
         element={user ? <Navigate to="/" replace /> : <LoginScreen />}
       />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <DataProvider>
-              <div className="app-container">
-                <main className="main-content">
-                  <HomeScreen />
-                </main>
-                <Navigation />
-              </div>
-            </DataProvider>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/habits"
-        element={
-          <ProtectedRoute>
-            <DataProvider>
-              <div className="app-container">
-                <main className="main-content">
-                  <HabitsScreen />
-                </main>
-                <Navigation />
-              </div>
-            </DataProvider>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/goals"
-        element={
-          <ProtectedRoute>
-            <DataProvider>
-              <div className="app-container">
-                <main className="main-content">
-                  <GoalsScreen />
-                </main>
-                <Navigation />
-              </div>
-            </DataProvider>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/progress"
-        element={
-          <ProtectedRoute>
-            <DataProvider>
-              <div className="app-container">
-                <main className="main-content">
-                  <ProgressScreen />
-                </main>
-                <Navigation />
-              </div>
-            </DataProvider>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <DataProvider>
-              <div className="app-container">
-                <main className="main-content">
-                  <SettingsScreen />
-                </main>
-                <Navigation />
-              </div>
-            </DataProvider>
-          </ProtectedRoute>
-        }
-      />
+      <Route element={<ProtectedLayout />}>
+        <Route path="/" element={<HomeScreen />} />
+        <Route path="/habits" element={<HabitsScreen />} />
+        <Route path="/goals" element={<GoalsScreen />} />
+        <Route path="/progress" element={<ProgressScreen />} />
+        <Route path="/settings" element={<SettingsScreen />} />
+      </Route>
     </Routes>
   );
 };

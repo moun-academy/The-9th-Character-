@@ -205,6 +205,27 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      // Set default values on error so the app is still usable
+      setSettings(DEFAULT_SETTINGS);
+      setTodayVote(null);
+      setAllVotes([]);
+      setTodayEntry(null);
+      setTodayFiveSecondRuleActions([]);
+      setHabits([]);
+      setTodayHabitCompletions([]);
+      setDailyGoals([]);
+      setWeeklyGoals([]);
+      setMonthlyGoals([]);
+      setLevelsGameState({
+        presenceLevel: 1,
+        presenceLevelStartDate: today,
+        productivityLevel: 1,
+        productivityLevelStartDate: today,
+      });
+      setEntries30Days([]);
+      setAllDailyGoals([]);
+      setAllWeeklyGoals([]);
+      setAllMonthlyGoals([]);
     } finally {
       setLoading(false);
     }
@@ -349,28 +370,40 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   const castVote = async (vote: 'yes' | 'no', note?: string) => {
     if (!user) return;
-    const newVote = await dataService.saveDailyVote(user.uid, { date: today, vote, note });
-    setTodayVote(newVote);
-    setAllVotes((prev) => {
-      const filtered = prev.filter((v) => v.date !== today);
-      return [newVote, ...filtered];
-    });
+    try {
+      const newVote = await dataService.saveDailyVote(user.uid, { date: today, vote, note });
+      setTodayVote(newVote);
+      setAllVotes((prev) => {
+        const filtered = prev.filter((v) => v.date !== today);
+        return [newVote, ...filtered];
+      });
+    } catch (error) {
+      console.error('Error casting vote:', error);
+    }
   };
 
   const updateEntry = async (entry: Partial<DailyEntry>) => {
     if (!user) return;
-    const newEntry = await dataService.saveDailyEntry(user.uid, { ...entry, date: today });
-    setTodayEntry(newEntry);
-    setEntries30Days((prev) => {
-      const filtered = prev.filter((e) => e.date !== today);
-      return [...filtered, newEntry].sort((a, b) => a.date.localeCompare(b.date));
-    });
+    try {
+      const newEntry = await dataService.saveDailyEntry(user.uid, { ...entry, date: today });
+      setTodayEntry(newEntry);
+      setEntries30Days((prev) => {
+        const filtered = prev.filter((e) => e.date !== today);
+        return [...filtered, newEntry].sort((a, b) => a.date.localeCompare(b.date));
+      });
+    } catch (error) {
+      console.error('Error updating entry:', error);
+    }
   };
 
   const addFiveSecondRuleAction = async (category: 'social' | 'productivity' | 'presence', note?: string) => {
     if (!user) return;
-    const action = await dataService.addFiveSecondRuleAction(user.uid, { date: today, category, note });
-    setTodayFiveSecondRuleActions((prev) => [action, ...prev]);
+    try {
+      const action = await dataService.addFiveSecondRuleAction(user.uid, { date: today, category, note });
+      setTodayFiveSecondRuleActions((prev) => [action, ...prev]);
+    } catch (error) {
+      console.error('Error adding 5SR action:', error);
+    }
   };
 
   const getFiveSecondRuleCounts = () => {
