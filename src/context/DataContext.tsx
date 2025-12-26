@@ -363,9 +363,13 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // Actions
   const updateSettings = async (updates: Partial<UserSettings>) => {
     if (!user || !settings) return;
-    const newSettings = { ...settings, ...updates };
-    await dataService.saveUserSettings(user.uid, newSettings);
-    setSettings(newSettings);
+    try {
+      const newSettings = { ...settings, ...updates };
+      await dataService.saveUserSettings(user.uid, newSettings);
+      setSettings(newSettings);
+    } catch (error) {
+      console.error('Error updating settings:', error);
+    }
   };
 
   const castVote = async (vote: 'yes' | 'no', note?: string) => {
@@ -416,33 +420,49 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   const addHabit = async (name: string, category?: string) => {
     if (!user) return;
-    const habit = await dataService.addHabit(user.uid, { name, category });
-    setHabits((prev) => [...prev, habit]);
+    try {
+      const habit = await dataService.addHabit(user.uid, { name, category });
+      setHabits((prev) => [...prev, habit]);
+    } catch (error) {
+      console.error('Error adding habit:', error);
+    }
   };
 
   const updateHabitAction = async (habitId: string, updates: Partial<Habit>) => {
     if (!user) return;
-    await dataService.updateHabit(user.uid, habitId, updates);
-    setHabits((prev) =>
-      prev.map((h) => (h.id === habitId ? { ...h, ...updates } : h))
-    );
+    try {
+      await dataService.updateHabit(user.uid, habitId, updates);
+      setHabits((prev) =>
+        prev.map((h) => (h.id === habitId ? { ...h, ...updates } : h))
+      );
+    } catch (error) {
+      console.error('Error updating habit:', error);
+    }
   };
 
   const deleteHabitAction = async (habitId: string) => {
     if (!user) return;
-    await dataService.deleteHabit(user.uid, habitId);
-    setHabits((prev) => prev.filter((h) => h.id !== habitId));
+    try {
+      await dataService.deleteHabit(user.uid, habitId);
+      setHabits((prev) => prev.filter((h) => h.id !== habitId));
+    } catch (error) {
+      console.error('Error deleting habit:', error);
+    }
   };
 
   const toggleHabitCompletion = async (habitId: string) => {
     if (!user) return;
-    const existing = todayHabitCompletions.find((c) => c.habitId === habitId);
-    const completed = existing ? !existing.completed : true;
-    const completion = await dataService.toggleHabitCompletion(user.uid, habitId, today, completed);
-    setTodayHabitCompletions((prev) => {
-      const filtered = prev.filter((c) => c.habitId !== habitId);
-      return [...filtered, completion];
-    });
+    try {
+      const existing = todayHabitCompletions.find((c) => c.habitId === habitId);
+      const completed = existing ? !existing.completed : true;
+      const completion = await dataService.toggleHabitCompletion(user.uid, habitId, today, completed);
+      setTodayHabitCompletions((prev) => {
+        const filtered = prev.filter((c) => c.habitId !== habitId);
+        return [...filtered, completion];
+      });
+    } catch (error) {
+      console.error('Error toggling habit completion:', error);
+    }
   };
 
   const getHabitStreak = (habitId: string): number => {
@@ -456,18 +476,22 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   const addGoal = async (type: 'daily' | 'weekly' | 'monthly', title: string) => {
     if (!user) return;
-    const dateKey = type === 'daily' ? today : type === 'weekly' ? currentWeek : currentMonth;
-    const goal = await dataService.addGoal(user.uid, { type, title, completed: false, date: dateKey });
+    try {
+      const dateKey = type === 'daily' ? today : type === 'weekly' ? currentWeek : currentMonth;
+      const goal = await dataService.addGoal(user.uid, { type, title, completed: false, date: dateKey });
 
-    if (type === 'daily') {
-      setDailyGoals((prev) => [...prev, goal]);
-      setAllDailyGoals((prev) => [...prev, goal]);
-    } else if (type === 'weekly') {
-      setWeeklyGoals((prev) => [...prev, goal]);
-      setAllWeeklyGoals((prev) => [...prev, goal]);
-    } else {
-      setMonthlyGoals((prev) => [...prev, goal]);
-      setAllMonthlyGoals((prev) => [...prev, goal]);
+      if (type === 'daily') {
+        setDailyGoals((prev) => [...prev, goal]);
+        setAllDailyGoals((prev) => [...prev, goal]);
+      } else if (type === 'weekly') {
+        setWeeklyGoals((prev) => [...prev, goal]);
+        setAllWeeklyGoals((prev) => [...prev, goal]);
+      } else {
+        setMonthlyGoals((prev) => [...prev, goal]);
+        setAllMonthlyGoals((prev) => [...prev, goal]);
+      }
+    } catch (error) {
+      console.error('Error adding goal:', error);
     }
   };
 
@@ -480,20 +504,24 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
     if (!goal) return;
 
-    await dataService.updateGoal(user.uid, goalId, { completed: !goal.completed });
+    try {
+      await dataService.updateGoal(user.uid, goalId, { completed: !goal.completed });
 
-    const updateGoalList = (list: Goal[]) =>
-      list.map((g) => (g.id === goalId ? { ...g, completed: !g.completed } : g));
+      const updateGoalList = (list: Goal[]) =>
+        list.map((g) => (g.id === goalId ? { ...g, completed: !g.completed } : g));
 
-    if (goal.type === 'daily') {
-      setDailyGoals(updateGoalList);
-      setAllDailyGoals(updateGoalList);
-    } else if (goal.type === 'weekly') {
-      setWeeklyGoals(updateGoalList);
-      setAllWeeklyGoals(updateGoalList);
-    } else {
-      setMonthlyGoals(updateGoalList);
-      setAllMonthlyGoals(updateGoalList);
+      if (goal.type === 'daily') {
+        setDailyGoals(updateGoalList);
+        setAllDailyGoals(updateGoalList);
+      } else if (goal.type === 'weekly') {
+        setWeeklyGoals(updateGoalList);
+        setAllWeeklyGoals(updateGoalList);
+      } else {
+        setMonthlyGoals(updateGoalList);
+        setAllMonthlyGoals(updateGoalList);
+      }
+    } catch (error) {
+      console.error('Error toggling goal:', error);
     }
   };
 
@@ -506,19 +534,23 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
     if (!goal) return;
 
-    await dataService.deleteGoal(user.uid, goalId);
+    try {
+      await dataService.deleteGoal(user.uid, goalId);
 
-    const filterGoalList = (list: Goal[]) => list.filter((g) => g.id !== goalId);
+      const filterGoalList = (list: Goal[]) => list.filter((g) => g.id !== goalId);
 
-    if (goal.type === 'daily') {
-      setDailyGoals(filterGoalList);
-      setAllDailyGoals(filterGoalList);
-    } else if (goal.type === 'weekly') {
-      setWeeklyGoals(filterGoalList);
-      setAllWeeklyGoals(filterGoalList);
-    } else {
-      setMonthlyGoals(filterGoalList);
-      setAllMonthlyGoals(filterGoalList);
+      if (goal.type === 'daily') {
+        setDailyGoals(filterGoalList);
+        setAllDailyGoals(filterGoalList);
+      } else if (goal.type === 'weekly') {
+        setWeeklyGoals(filterGoalList);
+        setAllWeeklyGoals(filterGoalList);
+      } else {
+        setMonthlyGoals(filterGoalList);
+        setAllMonthlyGoals(filterGoalList);
+      }
+    } catch (error) {
+      console.error('Error deleting goal:', error);
     }
   };
 
