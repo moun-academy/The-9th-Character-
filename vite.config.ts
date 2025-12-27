@@ -8,18 +8,24 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'The 9th Character',
         short_name: '9th Character',
-        description: 'Your daily cockpit for presence and action',
-        theme_color: '#0f172a',
-        background_color: '#0f172a',
+        description: 'Your daily cockpit for presence and action - 5 Second Rule',
+        theme_color: '#0a0e1a',
+        background_color: '#0a0e1a',
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
         icons: [
+          {
+            src: 'icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
           {
             src: 'icon-192.png',
             sizes: '192x192',
@@ -31,15 +37,15 @@ export default defineConfig({
             type: 'image/png'
           },
           {
-            src: 'icon-512.png',
+            src: 'icon-maskable.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'maskable'
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/firestore\.googleapis\.com\/.*/i,
@@ -51,11 +57,22 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24 // 1 day
               }
             }
+          },
+          {
+            urlPattern: /^https:\/\/identitytoolkit\.googleapis\.com\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'auth-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 // 1 hour
+              }
+            }
           }
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: false // Disable in dev to avoid caching issues
       }
     })
   ],
