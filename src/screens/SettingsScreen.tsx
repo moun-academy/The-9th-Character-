@@ -219,7 +219,7 @@ const SettingsScreen: React.FC = () => {
           <p className="philosophy-quote">
             "5, 4, 3, 2, 1... GO"
           </p>
-          <p className="version">Version 1.0.0</p>
+          <p className="version">Version 27 Dec - 12:00</p>
         </div>
       </section>
 

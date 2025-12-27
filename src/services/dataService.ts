@@ -8,7 +8,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type {
@@ -26,6 +25,16 @@ import { v4 as uuidv4 } from 'uuid';
 // Helper to get user document path
 const getUserPath = (userId: string) => `users/${userId}`;
 
+// Helper to remove undefined values from objects before saving to Firestore
+// Firestore doesn't accept undefined values, so we need to clean them out
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cleanData = <T>(obj: T): T => {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  return Object.fromEntries(
+    Object.entries(obj as Record<string, unknown>).filter(([, v]) => v !== undefined)
+  ) as T;
+};
+
 // ============= USER SETTINGS =============
 export const getUserSettings = async (userId: string): Promise<UserSettings | null> => {
   const docRef = doc(db, getUserPath(userId), 'settings', 'main');
@@ -35,7 +44,7 @@ export const getUserSettings = async (userId: string): Promise<UserSettings | nu
 
 export const saveUserSettings = async (userId: string, settings: UserSettings): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'settings', 'main');
-  await setDoc(docRef, settings);
+  await setDoc(docRef, cleanData(settings));
 };
 
 // ============= LEVELS GAME STATE =============
@@ -47,7 +56,7 @@ export const getLevelsGameState = async (userId: string): Promise<LevelsGameStat
 
 export const saveLevelsGameState = async (userId: string, state: LevelsGameState): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'gameState', 'levels');
-  await setDoc(docRef, state);
+  await setDoc(docRef, cleanData(state));
 };
 
 // ============= DAILY VOTES =============
@@ -65,15 +74,16 @@ export const saveDailyVote = async (userId: string, vote: Omit<DailyVote, 'id' |
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'votes', id);
-  await setDoc(docRef, fullVote);
+  await setDoc(docRef, cleanData(fullVote));
   return fullVote;
 };
 
 export const getAllVotes = async (userId: string): Promise<DailyVote[]> => {
   const votesRef = collection(db, getUserPath(userId), 'votes');
-  const q = query(votesRef, orderBy('date', 'desc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as DailyVote);
+  // Get all votes and sort client-side to avoid index requirement
+  const snapshot = await getDocs(votesRef);
+  const votes = snapshot.docs.map((doc) => doc.data() as DailyVote);
+  return votes.sort((a, b) => b.date.localeCompare(a.date));
 };
 
 // ============= DAILY ENTRIES =============
@@ -95,28 +105,29 @@ export const saveDailyEntry = async (userId: string, entry: Partial<DailyEntry> 
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'entries', entry.date);
-  await setDoc(docRef, fullEntry);
+  await setDoc(docRef, cleanData(fullEntry));
   return fullEntry;
 };
 
 export const getEntriesInRange = async (userId: string, startDate: string, endDate: string): Promise<DailyEntry[]> => {
   const entriesRef = collection(db, getUserPath(userId), 'entries');
-  const q = query(
-    entriesRef,
-    where('date', '>=', startDate),
-    where('date', '<=', endDate),
-    orderBy('date', 'asc')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as DailyEntry);
+  // Get all entries and filter/sort client-side to avoid composite index requirement
+  const snapshot = await getDocs(entriesRef);
+  const entries = snapshot.docs.map((doc) => doc.data() as DailyEntry);
+  return entries
+    .filter((e) => e.date >= startDate && e.date <= endDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
 };
 
 // ============= 5 SECOND RULE ACTIONS =============
 export const getFiveSecondRuleActions = async (userId: string, date: string): Promise<FiveSecondRuleAction[]> => {
   const actionsRef = collection(db, getUserPath(userId), 'fiveSecondRuleActions');
-  const q = query(actionsRef, where('date', '==', date), orderBy('timestamp', 'desc'));
+  // Use simple where clause without orderBy to avoid composite index requirement
+  const q = query(actionsRef, where('date', '==', date));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as FiveSecondRuleAction);
+  const actions = snapshot.docs.map((doc) => doc.data() as FiveSecondRuleAction);
+  // Sort by timestamp client-side (newest first)
+  return actions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 };
 
 export const addFiveSecondRuleAction = async (
@@ -130,7 +141,7 @@ export const addFiveSecondRuleAction = async (
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'fiveSecondRuleActions', id);
-  await setDoc(docRef, fullAction);
+  await setDoc(docRef, cleanData(fullAction));
   return fullAction;
 };
 
@@ -140,22 +151,24 @@ export const getFiveSecondRuleActionsInRange = async (
   endDate: string
 ): Promise<FiveSecondRuleAction[]> => {
   const actionsRef = collection(db, getUserPath(userId), 'fiveSecondRuleActions');
-  const q = query(
-    actionsRef,
-    where('date', '>=', startDate),
-    where('date', '<=', endDate),
-    orderBy('date', 'asc')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as FiveSecondRuleAction);
+  // Simplified query - fetch all and filter client-side to avoid composite index requirement
+  const snapshot = await getDocs(actionsRef);
+  const actions = snapshot.docs.map((doc) => doc.data() as FiveSecondRuleAction);
+  return actions
+    .filter((a) => a.date >= startDate && a.date <= endDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
 };
 
 // ============= HABITS =============
 export const getHabits = async (userId: string): Promise<Habit[]> => {
   const habitsRef = collection(db, getUserPath(userId), 'habits');
-  const q = query(habitsRef, where('archived', '==', false), orderBy('createdAt', 'asc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as Habit);
+  // Simplified query - filter archived client-side to avoid composite index requirement
+  const snapshot = await getDocs(habitsRef);
+  const habits = snapshot.docs.map((doc) => doc.data() as Habit);
+  // Filter out archived and sort by createdAt client-side
+  return habits
+    .filter((h) => !h.archived)
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 };
 
 export const addHabit = async (userId: string, habit: Omit<Habit, 'id' | 'createdAt' | 'archived'>): Promise<Habit> => {
@@ -167,13 +180,13 @@ export const addHabit = async (userId: string, habit: Omit<Habit, 'id' | 'create
     archived: false,
   };
   const docRef = doc(db, getUserPath(userId), 'habits', id);
-  await setDoc(docRef, fullHabit);
+  await setDoc(docRef, cleanData(fullHabit));
   return fullHabit;
 };
 
 export const updateHabit = async (userId: string, habitId: string, updates: Partial<Habit>): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'habits', habitId);
-  await updateDoc(docRef, updates);
+  await updateDoc(docRef, cleanData(updates));
 };
 
 export const deleteHabit = async (userId: string, habitId: string): Promise<void> => {
@@ -204,7 +217,7 @@ export const toggleHabitCompletion = async (
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'habitCompletions', id);
-  await setDoc(docRef, completion);
+  await setDoc(docRef, cleanData(completion));
   return completion;
 };
 
@@ -215,14 +228,12 @@ export const getHabitCompletionsInRange = async (
   endDate: string
 ): Promise<HabitCompletion[]> => {
   const completionsRef = collection(db, getUserPath(userId), 'habitCompletions');
-  const q = query(
-    completionsRef,
-    where('habitId', '==', habitId),
-    where('date', '>=', startDate),
-    where('date', '<=', endDate)
+  // Filter client-side to avoid composite index requirement
+  const snapshot = await getDocs(completionsRef);
+  const completions = snapshot.docs.map((doc) => doc.data() as HabitCompletion);
+  return completions.filter(
+    (c) => c.habitId === habitId && c.date >= startDate && c.date <= endDate
   );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as HabitCompletion);
 };
 
 export const getAllHabitCompletionsInRange = async (
@@ -231,21 +242,22 @@ export const getAllHabitCompletionsInRange = async (
   endDate: string
 ): Promise<HabitCompletion[]> => {
   const completionsRef = collection(db, getUserPath(userId), 'habitCompletions');
-  const q = query(
-    completionsRef,
-    where('date', '>=', startDate),
-    where('date', '<=', endDate)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as HabitCompletion);
+  // Filter client-side to avoid composite index requirement
+  const snapshot = await getDocs(completionsRef);
+  const completions = snapshot.docs.map((doc) => doc.data() as HabitCompletion);
+  return completions.filter((c) => c.date >= startDate && c.date <= endDate);
 };
 
 // ============= GOALS =============
 export const getGoals = async (userId: string, type: string, dateKey: string): Promise<Goal[]> => {
   const goalsRef = collection(db, getUserPath(userId), 'goals');
-  const q = query(goalsRef, where('type', '==', type), where('date', '==', dateKey), orderBy('createdAt', 'asc'));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as Goal);
+  // Simplified query - avoid compound where + orderBy to prevent composite index requirement
+  const snapshot = await getDocs(goalsRef);
+  const goals = snapshot.docs.map((doc) => doc.data() as Goal);
+  // Filter and sort client-side
+  return goals
+    .filter((g) => g.type === type && g.date === dateKey)
+    .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 };
 
 export const addGoal = async (userId: string, goal: Omit<Goal, 'id' | 'createdAt'>): Promise<Goal> => {
@@ -256,13 +268,13 @@ export const addGoal = async (userId: string, goal: Omit<Goal, 'id' | 'createdAt
     createdAt: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'goals', id);
-  await setDoc(docRef, fullGoal);
+  await setDoc(docRef, cleanData(fullGoal));
   return fullGoal;
 };
 
 export const updateGoal = async (userId: string, goalId: string, updates: Partial<Goal>): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'goals', goalId);
-  await updateDoc(docRef, updates);
+  await updateDoc(docRef, cleanData(updates));
 };
 
 export const deleteGoal = async (userId: string, goalId: string): Promise<void> => {
@@ -272,12 +284,8 @@ export const deleteGoal = async (userId: string, goalId: string): Promise<void> 
 
 export const getGoalsInRange = async (userId: string, type: string, startKey: string, endKey: string): Promise<Goal[]> => {
   const goalsRef = collection(db, getUserPath(userId), 'goals');
-  const q = query(
-    goalsRef,
-    where('type', '==', type),
-    where('date', '>=', startKey),
-    where('date', '<=', endKey)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => doc.data() as Goal);
+  // Simplified query - filter client-side to avoid composite index requirement
+  const snapshot = await getDocs(goalsRef);
+  const goals = snapshot.docs.map((doc) => doc.data() as Goal);
+  return goals.filter((g) => g.type === type && g.date >= startKey && g.date <= endKey);
 };
