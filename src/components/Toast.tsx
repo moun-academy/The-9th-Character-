@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning';
@@ -58,22 +58,6 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, removeTo
       ))}
     </div>
   );
-};
-
-// Hook for managing toasts
-export const useToast = () => {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const addToast = (message: string, type: ToastType = 'error') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  return { toasts, addToast, removeToast };
 };
 
 export default Toast;
