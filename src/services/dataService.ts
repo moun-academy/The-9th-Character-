@@ -26,6 +26,16 @@ import { v4 as uuidv4 } from 'uuid';
 // Helper to get user document path
 const getUserPath = (userId: string) => `users/${userId}`;
 
+// Helper to remove undefined values from objects before saving to Firestore
+// Firestore doesn't accept undefined values, so we need to clean them out
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cleanData = <T>(obj: T): T => {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  return Object.fromEntries(
+    Object.entries(obj as Record<string, unknown>).filter(([, v]) => v !== undefined)
+  ) as T;
+};
+
 // ============= USER SETTINGS =============
 export const getUserSettings = async (userId: string): Promise<UserSettings | null> => {
   const docRef = doc(db, getUserPath(userId), 'settings', 'main');
@@ -35,7 +45,7 @@ export const getUserSettings = async (userId: string): Promise<UserSettings | nu
 
 export const saveUserSettings = async (userId: string, settings: UserSettings): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'settings', 'main');
-  await setDoc(docRef, settings);
+  await setDoc(docRef, cleanData(settings));
 };
 
 // ============= LEVELS GAME STATE =============
@@ -47,7 +57,7 @@ export const getLevelsGameState = async (userId: string): Promise<LevelsGameStat
 
 export const saveLevelsGameState = async (userId: string, state: LevelsGameState): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'gameState', 'levels');
-  await setDoc(docRef, state);
+  await setDoc(docRef, cleanData(state));
 };
 
 // ============= DAILY VOTES =============
@@ -65,7 +75,7 @@ export const saveDailyVote = async (userId: string, vote: Omit<DailyVote, 'id' |
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'votes', id);
-  await setDoc(docRef, fullVote);
+  await setDoc(docRef, cleanData(fullVote));
   return fullVote;
 };
 
@@ -95,7 +105,7 @@ export const saveDailyEntry = async (userId: string, entry: Partial<DailyEntry> 
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'entries', entry.date);
-  await setDoc(docRef, fullEntry);
+  await setDoc(docRef, cleanData(fullEntry));
   return fullEntry;
 };
 
@@ -130,7 +140,7 @@ export const addFiveSecondRuleAction = async (
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'fiveSecondRuleActions', id);
-  await setDoc(docRef, fullAction);
+  await setDoc(docRef, cleanData(fullAction));
   return fullAction;
 };
 
@@ -167,13 +177,13 @@ export const addHabit = async (userId: string, habit: Omit<Habit, 'id' | 'create
     archived: false,
   };
   const docRef = doc(db, getUserPath(userId), 'habits', id);
-  await setDoc(docRef, fullHabit);
+  await setDoc(docRef, cleanData(fullHabit));
   return fullHabit;
 };
 
 export const updateHabit = async (userId: string, habitId: string, updates: Partial<Habit>): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'habits', habitId);
-  await updateDoc(docRef, updates);
+  await updateDoc(docRef, cleanData(updates));
 };
 
 export const deleteHabit = async (userId: string, habitId: string): Promise<void> => {
@@ -204,7 +214,7 @@ export const toggleHabitCompletion = async (
     timestamp: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'habitCompletions', id);
-  await setDoc(docRef, completion);
+  await setDoc(docRef, cleanData(completion));
   return completion;
 };
 
@@ -256,13 +266,13 @@ export const addGoal = async (userId: string, goal: Omit<Goal, 'id' | 'createdAt
     createdAt: Date.now(),
   };
   const docRef = doc(db, getUserPath(userId), 'goals', id);
-  await setDoc(docRef, fullGoal);
+  await setDoc(docRef, cleanData(fullGoal));
   return fullGoal;
 };
 
 export const updateGoal = async (userId: string, goalId: string, updates: Partial<Goal>): Promise<void> => {
   const docRef = doc(db, getUserPath(userId), 'goals', goalId);
-  await updateDoc(docRef, updates);
+  await updateDoc(docRef, cleanData(updates));
 };
 
 export const deleteGoal = async (userId: string, goalId: string): Promise<void> => {

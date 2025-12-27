@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 import type {
   DailyVote,
   DailyEntry,
@@ -94,6 +95,7 @@ interface DataProviderProps {
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const { user } = useAuth();
+  const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(true);
 
   // State
@@ -362,18 +364,26 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   // Actions
   const updateSettings = async (updates: Partial<UserSettings>) => {
-    if (!user || !settings) return;
+    if (!user || !settings) {
+      showError('Please sign in to update settings');
+      return;
+    }
     try {
       const newSettings = { ...settings, ...updates };
       await dataService.saveUserSettings(user.uid, newSettings);
       setSettings(newSettings);
+      showSuccess('Settings saved!');
     } catch (error) {
       console.error('Error updating settings:', error);
+      showError('Failed to save settings. Please try again.');
     }
   };
 
   const castVote = async (vote: 'yes' | 'no', note?: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to vote');
+      return;
+    }
     try {
       const newVote = await dataService.saveDailyVote(user.uid, { date: today, vote, note });
       setTodayVote(newVote);
@@ -381,13 +391,18 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         const filtered = prev.filter((v) => v.date !== today);
         return [newVote, ...filtered];
       });
+      showSuccess('Vote recorded!');
     } catch (error) {
       console.error('Error casting vote:', error);
+      showError('Failed to save vote. Please try again.');
     }
   };
 
   const updateEntry = async (entry: Partial<DailyEntry>) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to update scores');
+      return;
+    }
     try {
       const newEntry = await dataService.saveDailyEntry(user.uid, { ...entry, date: today });
       setTodayEntry(newEntry);
@@ -397,16 +412,22 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       });
     } catch (error) {
       console.error('Error updating entry:', error);
+      showError('Failed to save score. Please try again.');
     }
   };
 
   const addFiveSecondRuleAction = async (category: 'social' | 'productivity' | 'presence', note?: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to track actions');
+      return;
+    }
     try {
       const action = await dataService.addFiveSecondRuleAction(user.uid, { date: today, category, note });
       setTodayFiveSecondRuleActions((prev) => [action, ...prev]);
+      showSuccess(`5-second rule: ${category} action logged!`);
     } catch (error) {
       console.error('Error adding 5SR action:', error);
+      showError('Failed to log action. Please try again.');
     }
   };
 
@@ -419,39 +440,57 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   const addHabit = async (name: string, category?: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to add habits');
+      return;
+    }
     try {
       const habit = await dataService.addHabit(user.uid, { name, category });
       setHabits((prev) => [...prev, habit]);
+      showSuccess('Habit added!');
     } catch (error) {
       console.error('Error adding habit:', error);
+      showError('Failed to add habit. Please try again.');
     }
   };
 
   const updateHabitAction = async (habitId: string, updates: Partial<Habit>) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to update habits');
+      return;
+    }
     try {
       await dataService.updateHabit(user.uid, habitId, updates);
       setHabits((prev) =>
         prev.map((h) => (h.id === habitId ? { ...h, ...updates } : h))
       );
+      showSuccess('Habit updated!');
     } catch (error) {
       console.error('Error updating habit:', error);
+      showError('Failed to update habit. Please try again.');
     }
   };
 
   const deleteHabitAction = async (habitId: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to delete habits');
+      return;
+    }
     try {
       await dataService.deleteHabit(user.uid, habitId);
       setHabits((prev) => prev.filter((h) => h.id !== habitId));
+      showSuccess('Habit deleted');
     } catch (error) {
       console.error('Error deleting habit:', error);
+      showError('Failed to delete habit. Please try again.');
     }
   };
 
   const toggleHabitCompletion = async (habitId: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to track habits');
+      return;
+    }
     try {
       const existing = todayHabitCompletions.find((c) => c.habitId === habitId);
       const completed = existing ? !existing.completed : true;
@@ -462,6 +501,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       });
     } catch (error) {
       console.error('Error toggling habit completion:', error);
+      showError('Failed to update habit. Please try again.');
     }
   };
 
@@ -475,7 +515,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   };
 
   const addGoal = async (type: 'daily' | 'weekly' | 'monthly', title: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to add goals');
+      return;
+    }
     try {
       const dateKey = type === 'daily' ? today : type === 'weekly' ? currentWeek : currentMonth;
       const goal = await dataService.addGoal(user.uid, { type, title, completed: false, date: dateKey });
@@ -490,13 +533,18 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setMonthlyGoals((prev) => [...prev, goal]);
         setAllMonthlyGoals((prev) => [...prev, goal]);
       }
+      showSuccess('Goal added!');
     } catch (error) {
       console.error('Error adding goal:', error);
+      showError('Failed to add goal. Please try again.');
     }
   };
 
   const toggleGoal = async (goalId: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to update goals');
+      return;
+    }
     const goal =
       dailyGoals.find((g) => g.id === goalId) ||
       weeklyGoals.find((g) => g.id === goalId) ||
@@ -522,11 +570,15 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Error toggling goal:', error);
+      showError('Failed to update goal. Please try again.');
     }
   };
 
   const deleteGoalAction = async (goalId: string) => {
-    if (!user) return;
+    if (!user) {
+      showError('Please sign in to delete goals');
+      return;
+    }
     const goal =
       dailyGoals.find((g) => g.id === goalId) ||
       weeklyGoals.find((g) => g.id === goalId) ||
@@ -549,8 +601,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setMonthlyGoals(filterGoalList);
         setAllMonthlyGoals(filterGoalList);
       }
+      showSuccess('Goal deleted');
     } catch (error) {
       console.error('Error deleting goal:', error);
+      showError('Failed to delete goal. Please try again.');
     }
   };
 
