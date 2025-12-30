@@ -19,6 +19,8 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        // @ts-ignore - gcm_sender_id is needed for Firebase Cloud Messaging
+        gcm_sender_id: '103953800507',
         icons: [
           {
             src: 'icon.svg',

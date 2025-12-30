@@ -1,3 +1,6 @@
+import { getMessagingInstance } from '../firebase';
+import { getToken, onMessage } from 'firebase/messaging';
+
 export interface NotificationPermissionStatus {
   permission: NotificationPermission;
   supported: boolean;
@@ -21,6 +24,69 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
   } catch (error) {
     console.error('Error requesting notification permission:', error);
     return 'denied';
+  }
+};
+
+// FCM Token Management
+export const getFCMToken = async (): Promise<string | null> => {
+  try {
+    const messaging = await getMessagingInstance();
+    if (!messaging) {
+      console.log('FCM is not supported on this browser');
+      return null;
+    }
+
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') {
+      console.log('Notification permission not granted');
+      return null;
+    }
+
+    // Register the Firebase messaging service worker
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    console.log('Service Worker registered:', registration);
+
+    const token = await getToken(messaging, {
+      vapidKey: 'BKagOny0KF_2pCJQ3m....', // You'll need to generate this from Firebase Console
+      serviceWorkerRegistration: registration
+    });
+
+    if (token) {
+      console.log('FCM Token:', token);
+      return token;
+    } else {
+      console.log('No registration token available');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error getting FCM token:', error);
+    return null;
+  }
+};
+
+// Setup foreground message listener
+export const setupForegroundMessageListener = async () => {
+  try {
+    const messaging = await getMessagingInstance();
+    if (!messaging) return;
+
+    onMessage(messaging, (payload) => {
+      console.log('Message received in foreground:', payload);
+
+      const notificationTitle = payload.notification?.title || 'The 9th Character';
+      const notificationOptions = {
+        body: payload.notification?.body || '',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: payload.data?.tag || 'default',
+      };
+
+      if (Notification.permission === 'granted') {
+        new Notification(notificationTitle, notificationOptions);
+      }
+    });
+  } catch (error) {
+    console.error('Error setting up foreground message listener:', error);
   }
 };
 
