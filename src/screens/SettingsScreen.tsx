@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useNotification } from '../context/NotificationContext';
 import {
   User,
   Bell,
@@ -14,12 +15,12 @@ import {
 import {
   requestNotificationPermission,
   getNotificationPermission,
-  checkNotificationSupport,
 } from '../services/notificationService';
 
 const SettingsScreen: React.FC = () => {
   const { user, signOut } = useAuth();
   const { loading, settings, updateSettings } = useData();
+  const { fcmToken, requestPermission, isSupported } = useNotification();
 
   const [editingIdentity, setEditingIdentity] = useState(false);
   const [identityDraft, setIdentityDraft] = useState('');
@@ -42,6 +43,7 @@ const SettingsScreen: React.FC = () => {
   };
 
   const handleRequestNotifications = async () => {
+    await requestPermission();
     const permission = await requestNotificationPermission();
     setNotificationStatus(permission);
     if (permission === 'granted') {
@@ -62,7 +64,7 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const notificationsSupported = checkNotificationSupport();
+  const notificationsSupported = isSupported;
 
   return (
     <div className="settings-screen">
@@ -219,7 +221,10 @@ const SettingsScreen: React.FC = () => {
           <p className="philosophy-quote">
             "5, 4, 3, 2, 1... GO"
           </p>
-          <p className="version">Version 27 Dec - 11:25</p>
+          <p className="version">v30-12-1612</p>
+          {fcmToken && (
+            <p className="fcm-status">Push notifications enabled</p>
+          )}
         </div>
       </section>
 
