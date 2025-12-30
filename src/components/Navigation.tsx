@@ -27,7 +27,7 @@ const Navigation: React.FC = () => {
           <span>Settings</span>
         </NavLink>
       </nav>
-      <div className="app-footer">v30-12-2055</div>
+      <div className="app-footer">v30-12-2124</div>
     </>
   );
 };

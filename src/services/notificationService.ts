@@ -99,7 +99,7 @@ export const setupForegroundMessageListener = async () => {
   }
 };
 
-export const showLocalNotification = (title: string, options?: NotificationOptions): void => {
+export const showLocalNotification = async (title: string, options?: NotificationOptions): Promise<void> => {
   console.log('[Notification] Attempting to show notification:', title);
 
   if (!checkNotificationSupport()) {
@@ -112,20 +112,23 @@ export const showLocalNotification = (title: string, options?: NotificationOptio
     return;
   }
 
-  console.log('[Notification] ✅ Creating notification...');
-  const notification = new Notification(title, {
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    ...options,
-  });
+  try {
+    console.log('[Notification] ✅ Getting service worker registration...');
+    const registration = await navigator.serviceWorker.ready;
+    console.log('[Notification] ✅ Service worker ready, showing notification...');
 
-  notification.onclick = () => {
-    console.log('[Notification] Notification clicked');
-    window.focus();
-    notification.close();
-  };
+    // Use Service Worker API for notifications (required for mobile/PWA)
+    await registration.showNotification(title, {
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      ...options,
+    });
 
-  console.log('[Notification] ✅ Notification displayed successfully');
+    console.log('[Notification] ✅ Notification displayed successfully');
+  } catch (error) {
+    console.error('[Notification] ❌ Error showing notification:', error);
+    throw error;
+  }
 };
 
 // Test notification function for debugging
@@ -152,9 +155,22 @@ export const sendTestNotification = async (): Promise<{ success: boolean; messag
     }
     console.log('[TEST] ✅ Permission is granted');
 
-    // Send test notification
+    // Check service worker
+    if (!('serviceWorker' in navigator)) {
+      const msg = 'Service Worker not supported';
+      console.log('[TEST] ❌', msg);
+      return { success: false, message: msg };
+    }
+    console.log('[TEST] ✅ Service Worker supported');
+
+    // Wait for service worker to be ready
+    console.log('[TEST] Waiting for service worker to be ready...');
+    const registration = await navigator.serviceWorker.ready;
+    console.log('[TEST] ✅ Service worker ready:', registration);
+
+    // Send test notification using Service Worker API
     console.log('[TEST] Sending test notification...');
-    showLocalNotification('Test - Are you doing what\'s right?', {
+    await showLocalNotification('Test - Are you doing what\'s right?', {
       body: 'If not, use the 5 second rule!',
       tag: 'test-notification',
       requireInteraction: false,

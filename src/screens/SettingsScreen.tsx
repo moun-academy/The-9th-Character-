@@ -327,7 +327,7 @@ const SettingsScreen: React.FC = () => {
           <p className="philosophy-quote">
             "5, 4, 3, 2, 1... GO"
           </p>
-          <p className="version">v30-12-2055</p>
+          <p className="version">v30-12-2124</p>
           {fcmToken && (
             <p className="fcm-status">Push notifications enabled</p>
           )}
