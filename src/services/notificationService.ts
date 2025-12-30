@@ -47,7 +47,7 @@ export const getFCMToken = async (): Promise<string | null> => {
     console.log('Service Worker registered:', registration);
 
     const token = await getToken(messaging, {
-      vapidKey: 'BKagOny0KF_2pCJQ3m....', // You'll need to generate this from Firebase Console
+      vapidKey: 'BNh9mYnbeNvtt7Fwg7YruqCS8qfLwnuCmLs_QQtHdK0Mb210JdOUVbfOD92i0cZemuOcjhV66kjmb3FW0RAGI7k',
       serviceWorkerRegistration: registration
     });
 
