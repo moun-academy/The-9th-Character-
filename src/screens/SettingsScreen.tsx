@@ -15,6 +15,7 @@ import {
 import {
   requestNotificationPermission,
   getNotificationPermission,
+  sendTestNotification,
 } from '../services/notificationService';
 
 const SettingsScreen: React.FC = () => {
@@ -25,6 +26,7 @@ const SettingsScreen: React.FC = () => {
   const [editingIdentity, setEditingIdentity] = useState(false);
   const [identityDraft, setIdentityDraft] = useState('');
   const [notificationStatus, setNotificationStatus] = useState(getNotificationPermission());
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   if (loading || !settings) {
     return (
@@ -62,6 +64,17 @@ const SettingsScreen: React.FC = () => {
     if (window.confirm('Are you sure you want to sign out?')) {
       await signOut();
     }
+  };
+
+  const handleTestNotification = async () => {
+    console.log('🧪 User clicked Test Notification button');
+    const result = await sendTestNotification();
+    setTestResult(result);
+
+    // Clear the result after 5 seconds
+    setTimeout(() => {
+      setTestResult(null);
+    }, 5000);
   };
 
   const notificationsSupported = isSupported;
@@ -166,6 +179,99 @@ const SettingsScreen: React.FC = () => {
                 <span>Notifications enabled</span>
               </div>
 
+              {/* Notification Tester Section */}
+              <div className="notification-tester">
+                <h3 style={{ marginTop: '20px', marginBottom: '12px', fontSize: '16px', fontWeight: '600' }}>
+                  🧪 NOTIFICATION TESTER
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                  {/* Permission Status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Permission:</span>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: notificationStatus === 'granted' ? 'var(--accent-success)' :
+                             notificationStatus === 'denied' ? 'var(--accent-danger)' :
+                             'var(--accent-warning)'
+                    }}>
+                      {notificationStatus === 'granted' ? '✅ Granted' :
+                       notificationStatus === 'denied' ? '❌ Denied' :
+                       '⚠️ Not requested'}
+                    </span>
+                  </div>
+
+                  {/* FCM Token Status */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>FCM Token:</span>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: fcmToken ? 'var(--accent-success)' : 'var(--accent-danger)'
+                    }}>
+                      {fcmToken ? '✅ Generated' : '❌ Not generated'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Test Notification Button */}
+                {notificationStatus === 'granted' && (
+                  <button
+                    className="btn-primary"
+                    onClick={handleTestNotification}
+                    style={{
+                      width: '100%',
+                      marginBottom: '12px',
+                      background: 'var(--accent-5sr-gradient)',
+                      fontSize: '15px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    🔔 Send Test Notification Now
+                  </button>
+                )}
+
+                {/* Request Permission Button */}
+                {notificationStatus !== 'granted' && (
+                  <button
+                    className="btn-primary"
+                    onClick={handleRequestNotifications}
+                    style={{ width: '100%', marginBottom: '12px' }}
+                  >
+                    <Bell size={20} />
+                    Request Permission
+                  </button>
+                )}
+
+                {/* Test Result Message */}
+                {testResult && (
+                  <div style={{
+                    padding: '12px',
+                    borderRadius: '8px',
+                    background: testResult.success ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: `1px solid ${testResult.success ? 'var(--accent-success)' : 'var(--accent-danger)'}`,
+                    fontSize: '14px',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {testResult.success ? '✅' : '❌'} {testResult.message}
+                  </div>
+                )}
+
+                <div style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  marginTop: '12px',
+                  padding: '8px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: '6px'
+                }}>
+                  💡 Check browser console for detailed logs
+                </div>
+              </div>
+
+              <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
+
               <div className="reminder-times">
                 <h3>
                   <Clock size={16} />
@@ -221,7 +327,7 @@ const SettingsScreen: React.FC = () => {
           <p className="philosophy-quote">
             "5, 4, 3, 2, 1... GO"
           </p>
-          <p className="version">v30-12-1612</p>
+          <p className="version">v30-12-2124</p>
           {fcmToken && (
             <p className="fcm-status">Push notifications enabled</p>
           )}

@@ -16,13 +16,18 @@ export const getNotificationPermission = (): NotificationPermission => {
 };
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
-  if (!checkNotificationSupport()) return 'denied';
+  if (!checkNotificationSupport()) {
+    console.log('[Notification] Browser does not support notifications');
+    return 'denied';
+  }
 
   try {
+    console.log('[Notification] Requesting notification permission...');
     const permission = await Notification.requestPermission();
+    console.log('[Notification] Permission result:', permission);
     return permission;
   } catch (error) {
-    console.error('Error requesting notification permission:', error);
+    console.error('[Notification] Error requesting permission:', error);
     return 'denied';
   }
 };
@@ -30,36 +35,40 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 // FCM Token Management
 export const getFCMToken = async (): Promise<string | null> => {
   try {
+    console.log('[FCM] Starting token generation...');
     const messaging = await getMessagingInstance();
     if (!messaging) {
-      console.log('FCM is not supported on this browser');
+      console.log('[FCM] Not supported on this browser');
       return null;
     }
+    console.log('[FCM] Messaging instance obtained');
 
     const permission = await requestNotificationPermission();
     if (permission !== 'granted') {
-      console.log('Notification permission not granted');
+      console.log('[FCM] Notification permission not granted:', permission);
       return null;
     }
+    console.log('[FCM] Permission granted, registering service worker...');
 
     // Register the Firebase messaging service worker
     const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log('Service Worker registered:', registration);
+    console.log('[FCM] Service Worker registered:', registration);
 
+    console.log('[FCM] Requesting FCM token with VAPID key...');
     const token = await getToken(messaging, {
       vapidKey: 'BNh9mYnbeNvtt7Fwg7YruqCS8qfLwnuCmLs_QQtHdK0Mb210JdOUVbfOD92i0cZemuOcjhV66kjmb3FW0RAGI7k',
       serviceWorkerRegistration: registration
     });
 
     if (token) {
-      console.log('FCM Token:', token);
+      console.log('[FCM] ✅ Token generated successfully:', token);
       return token;
     } else {
-      console.log('No registration token available');
+      console.log('[FCM] ❌ No registration token available');
       return null;
     }
   } catch (error) {
-    console.error('Error getting FCM token:', error);
+    console.error('[FCM] ❌ Error getting token:', error);
     return null;
   }
 };
@@ -90,19 +99,97 @@ export const setupForegroundMessageListener = async () => {
   }
 };
 
-export const showLocalNotification = (title: string, options?: NotificationOptions): void => {
-  if (!checkNotificationSupport() || Notification.permission !== 'granted') return;
+export const showLocalNotification = async (title: string, options?: NotificationOptions): Promise<void> => {
+  console.log('[Notification] Attempting to show notification:', title);
 
-  const notification = new Notification(title, {
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    ...options,
-  });
+  if (!checkNotificationSupport()) {
+    console.log('[Notification] ❌ Not supported');
+    return;
+  }
 
-  notification.onclick = () => {
-    window.focus();
-    notification.close();
-  };
+  if (Notification.permission !== 'granted') {
+    console.log('[Notification] ❌ Permission not granted:', Notification.permission);
+    return;
+  }
+
+  try {
+    console.log('[Notification] ✅ Getting service worker registration...');
+    const registration = await navigator.serviceWorker.ready;
+    console.log('[Notification] ✅ Service worker ready, showing notification...');
+
+    // Use Service Worker API for notifications (required for mobile/PWA)
+    await registration.showNotification(title, {
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      ...options,
+    });
+
+    console.log('[Notification] ✅ Notification displayed successfully');
+  } catch (error) {
+    console.error('[Notification] ❌ Error showing notification:', error);
+    throw error;
+  }
+};
+
+// Test notification function for debugging
+export const sendTestNotification = async (): Promise<{ success: boolean; message: string }> => {
+  console.log('[TEST] ========== NOTIFICATION TEST STARTED ==========');
+
+  try {
+    // Check support
+    if (!checkNotificationSupport()) {
+      const msg = 'Notifications not supported in this browser';
+      console.log('[TEST] ❌', msg);
+      return { success: false, message: msg };
+    }
+    console.log('[TEST] ✅ Browser supports notifications');
+
+    // Check permission
+    const currentPermission = Notification.permission;
+    console.log('[TEST] Current permission:', currentPermission);
+
+    if (currentPermission !== 'granted') {
+      const msg = `Permission is ${currentPermission}. Please grant permission first.`;
+      console.log('[TEST] ❌', msg);
+      return { success: false, message: msg };
+    }
+    console.log('[TEST] ✅ Permission is granted');
+
+    // Check service worker
+    if (!('serviceWorker' in navigator)) {
+      const msg = 'Service Worker not supported';
+      console.log('[TEST] ❌', msg);
+      return { success: false, message: msg };
+    }
+    console.log('[TEST] ✅ Service Worker supported');
+
+    // Wait for service worker to be ready
+    console.log('[TEST] Waiting for service worker to be ready...');
+    const registration = await navigator.serviceWorker.ready;
+    console.log('[TEST] ✅ Service worker ready:', registration);
+
+    // Send test notification using Service Worker API
+    console.log('[TEST] Sending test notification...');
+    await showLocalNotification('Test - Are you doing what\'s right?', {
+      body: 'If not, use the 5 second rule!',
+      tag: 'test-notification',
+      requireInteraction: false,
+    });
+
+    console.log('[TEST] ========== NOTIFICATION TEST COMPLETED ==========');
+    return {
+      success: true,
+      message: 'Test notification sent! Check if it appeared on your device.'
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[TEST] ❌ Error:', error);
+    console.log('[TEST] ========== NOTIFICATION TEST FAILED ==========');
+    return {
+      success: false,
+      message: `Error: ${errorMsg}`
+    };
+  }
 };
 
 // Schedule notifications using the browser's native scheduling
