@@ -16,6 +16,10 @@ import {
   requestNotificationPermission,
   getNotificationPermission,
   sendTestNotification,
+  startHourlyNotifications,
+  stopHourlyNotifications,
+  getNextHourlyNotificationTime,
+  calculateNotificationsPerDay,
 } from '../services/notificationService';
 
 const SettingsScreen: React.FC = () => {
@@ -27,6 +31,7 @@ const SettingsScreen: React.FC = () => {
   const [identityDraft, setIdentityDraft] = useState('');
   const [notificationStatus, setNotificationStatus] = useState(getNotificationPermission());
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [nextNotificationTime, setNextNotificationTime] = useState<string | null>(null);
 
   if (loading || !settings) {
     return (
@@ -76,6 +81,77 @@ const SettingsScreen: React.FC = () => {
       setTestResult(null);
     }, 5000);
   };
+
+  const handleHourlyToggle = async (enabled: boolean) => {
+    await updateSettings({ hourlyNotificationsEnabled: enabled });
+
+    if (enabled) {
+      const config = {
+        startTime: settings.hourlyNotificationStartTime || '07:00',
+        endTime: settings.hourlyNotificationEndTime || '21:00',
+        message: settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!',
+      };
+      await startHourlyNotifications(config);
+      updateNextNotificationTime(config);
+    } else {
+      stopHourlyNotifications();
+      setNextNotificationTime(null);
+    }
+  };
+
+  const handleHourlyTimeChange = async (field: 'hourlyNotificationStartTime' | 'hourlyNotificationEndTime', value: string) => {
+    await updateSettings({ [field]: value });
+
+    if (settings.hourlyNotificationsEnabled) {
+      const config = {
+        startTime: field === 'hourlyNotificationStartTime' ? value : (settings.hourlyNotificationStartTime || '07:00'),
+        endTime: field === 'hourlyNotificationEndTime' ? value : (settings.hourlyNotificationEndTime || '21:00'),
+        message: settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!',
+      };
+      stopHourlyNotifications();
+      await startHourlyNotifications(config);
+      updateNextNotificationTime(config);
+    }
+  };
+
+  const handleHourlyMessageChange = async (message: string) => {
+    await updateSettings({ hourlyNotificationMessage: message });
+
+    if (settings.hourlyNotificationsEnabled) {
+      const config = {
+        startTime: settings.hourlyNotificationStartTime || '07:00',
+        endTime: settings.hourlyNotificationEndTime || '21:00',
+        message: message,
+      };
+      stopHourlyNotifications();
+      await startHourlyNotifications(config);
+    }
+  };
+
+  const updateNextNotificationTime = (config: { startTime: string; endTime: string }) => {
+    const nextTime = getNextHourlyNotificationTime(config);
+    setNextNotificationTime(nextTime);
+  };
+
+  // Initialize hourly notifications on mount if enabled
+  React.useEffect(() => {
+    if (settings && settings.hourlyNotificationsEnabled && notificationStatus === 'granted') {
+      const config = {
+        startTime: settings.hourlyNotificationStartTime || '07:00',
+        endTime: settings.hourlyNotificationEndTime || '21:00',
+        message: settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!',
+      };
+      startHourlyNotifications(config);
+      updateNextNotificationTime(config);
+
+      // Update next notification time every minute
+      const interval = setInterval(() => {
+        updateNextNotificationTime(config);
+      }, 60000);
+
+      return () => clearInterval(interval);
+    }
+  }, [settings, notificationStatus]);
 
   const notificationsSupported = isSupported;
 
@@ -272,6 +348,159 @@ const SettingsScreen: React.FC = () => {
 
               <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
 
+              {/* Hourly Notification Scheduler */}
+              <div className="hourly-scheduler">
+                <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>
+                  ⏰ HOURLY NOTIFICATION SCHEDULER
+                </h3>
+
+                {/* Enable/Disable Toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', padding: '12px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '500' }}>Enable Hourly Notifications</span>
+                  <label style={{ position: 'relative', display: 'inline-block', width: '50px', height: '24px' }}>
+                    <input
+                      type="checkbox"
+                      checked={settings.hourlyNotificationsEnabled || false}
+                      onChange={(e) => handleHourlyToggle(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: 'absolute',
+                      cursor: 'pointer',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundColor: settings.hourlyNotificationsEnabled ? 'var(--accent-success)' : '#ccc',
+                      transition: '0.4s',
+                      borderRadius: '24px',
+                    }}>
+                      <span style={{
+                        position: 'absolute',
+                        content: '""',
+                        height: '18px',
+                        width: '18px',
+                        left: settings.hourlyNotificationsEnabled ? '28px' : '3px',
+                        bottom: '3px',
+                        backgroundColor: 'white',
+                        transition: '0.4s',
+                        borderRadius: '50%',
+                      }} />
+                    </span>
+                  </label>
+                </div>
+
+                {/* Time Range Configuration */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                        Start Time
+                      </label>
+                      <input
+                        type="time"
+                        value={settings.hourlyNotificationStartTime || '07:00'}
+                        onChange={(e) => handleHourlyTimeChange('hourlyNotificationStartTime', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          background: 'var(--bg-tertiary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          color: 'var(--text-primary)',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                        End Time
+                      </label>
+                      <input
+                        type="time"
+                        value={settings.hourlyNotificationEndTime || '21:00'}
+                        onChange={(e) => handleHourlyTimeChange('hourlyNotificationEndTime', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          background: 'var(--bg-tertiary)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '8px',
+                          color: 'var(--text-primary)',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{
+                    padding: '8px 12px',
+                    background: 'rgba(139, 92, 246, 0.1)',
+                    border: '1px solid var(--accent-presence)',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    color: 'var(--text-primary)'
+                  }}>
+                    📊 {calculateNotificationsPerDay(
+                      settings.hourlyNotificationStartTime || '07:00',
+                      settings.hourlyNotificationEndTime || '21:00'
+                    )} notifications from {settings.hourlyNotificationStartTime || '07:00'} to {settings.hourlyNotificationEndTime || '21:00'}
+                  </div>
+                </div>
+
+                {/* Notification Message */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Notification Message
+                  </label>
+                  <textarea
+                    value={settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!'}
+                    onChange={(e) => handleHourlyMessageChange(e.target.value)}
+                    placeholder="Enter your custom message..."
+                    rows={2}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      background: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                {/* Next Notification Time */}
+                {settings.hourlyNotificationsEnabled && nextNotificationTime && (
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid var(--accent-5sr)',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    color: 'var(--text-primary)',
+                    fontWeight: '500'
+                  }}>
+                    🔔 Next notification at: {nextNotificationTime}
+                  </div>
+                )}
+
+                <div style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  marginTop: '12px',
+                  padding: '8px',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: '6px'
+                }}>
+                  ℹ️ Notifications will trigger every hour within the configured time range. Keep the app open in background for best results.
+                </div>
+              </div>
+
+              <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid var(--border-color)' }} />
+
               <div className="reminder-times">
                 <h3>
                   <Clock size={16} />
@@ -327,7 +556,7 @@ const SettingsScreen: React.FC = () => {
           <p className="philosophy-quote">
             "5, 4, 3, 2, 1... GO"
           </p>
-          <p className="version">v30-12-2124</p>
+          <p className="version">v12-31-1542</p>
           {fcmToken && (
             <p className="fcm-status">Push notifications enabled</p>
           )}

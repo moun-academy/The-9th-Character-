@@ -192,6 +192,100 @@ export const sendTestNotification = async (): Promise<{ success: boolean; messag
   }
 };
 
+// Hourly Notification Scheduler
+let hourlyNotificationInterval: number | null = null;
+
+export const startHourlyNotifications = async (config: {
+  startTime: string;
+  endTime: string;
+  message: string;
+}) => {
+  console.log('[Hourly] Starting hourly notifications:', config);
+
+  // Clear any existing interval
+  stopHourlyNotifications();
+
+  // Schedule the next notification
+  await scheduleNextHourlyNotification(config);
+
+  // Set up hourly interval (check every minute to ensure we don't miss the hour)
+  hourlyNotificationInterval = window.setInterval(async () => {
+    await scheduleNextHourlyNotification(config);
+  }, 60000); // Check every minute
+
+  console.log('[Hourly] ✅ Hourly notifications started');
+};
+
+export const stopHourlyNotifications = () => {
+  if (hourlyNotificationInterval !== null) {
+    clearInterval(hourlyNotificationInterval);
+    hourlyNotificationInterval = null;
+    console.log('[Hourly] ✅ Hourly notifications stopped');
+  }
+};
+
+export const scheduleNextHourlyNotification = async (config: {
+  startTime: string;
+  endTime: string;
+  message: string;
+}) => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+
+  const [startHour] = config.startTime.split(':').map(Number);
+  const [endHour] = config.endTime.split(':').map(Number);
+
+  console.log('[Hourly] Checking schedule - Current:', `${currentHour}:${currentMinute}`, 'Range:', `${startHour}:00 - ${endHour}:00`);
+
+  // Check if we're within the notification window and at the start of an hour
+  if (currentHour >= startHour && currentHour < endHour && currentMinute === 0) {
+    console.log('[Hourly] ✅ Time to send hourly notification!');
+    try {
+      await showLocalNotification('Hourly Reminder', {
+        body: config.message,
+        tag: `hourly-${currentHour}`,
+        requireInteraction: false,
+      });
+    } catch (error) {
+      console.error('[Hourly] ❌ Error sending notification:', error);
+    }
+  }
+};
+
+export const getNextHourlyNotificationTime = (config: {
+  startTime: string;
+  endTime: string;
+}): string | null => {
+  const now = new Date();
+  const currentHour = now.getHours();
+
+  const [startHour] = config.startTime.split(':').map(Number);
+  const [endHour] = config.endTime.split(':').map(Number);
+
+  // Find next notification time
+  if (currentHour < startHour) {
+    return `${config.startTime}`;
+  } else if (currentHour >= endHour) {
+    return `Tomorrow at ${config.startTime}`;
+  } else {
+    const nextHour = currentHour + 1;
+    if (nextHour < endHour) {
+      return `${nextHour.toString().padStart(2, '0')}:00`;
+    } else {
+      return `Tomorrow at ${config.startTime}`;
+    }
+  }
+};
+
+export const calculateNotificationsPerDay = (startTime: string, endTime: string): number => {
+  const [startHour] = startTime.split(':').map(Number);
+  const [endHour] = endTime.split(':').map(Number);
+
+  if (endHour <= startHour) return 0;
+  return endHour - startHour;
+};
+
 // Schedule notifications using the browser's native scheduling
 // For production, you'd use Firebase Cloud Messaging or a service worker
 export const scheduleReminders = (settings: {
