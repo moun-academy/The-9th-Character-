@@ -64,6 +64,11 @@ export interface UserSettings {
   morningReminderTime: string; // HH:MM
   middayReminderTime: string;
   eveningReminderTime: string;
+  // Hourly notifications
+  hourlyNotificationsEnabled?: boolean;
+  hourlyNotificationStartTime?: string; // HH:MM
+  hourlyNotificationEndTime?: string; // HH:MM
+  hourlyNotificationMessage?: string;
 }
 
 // Levels Game State
