@@ -21,6 +21,12 @@ import {
   getNextHourlyNotificationTime,
   calculateNotificationsPerDay,
 } from '../services/notificationService';
+import {
+  isNativePlatform,
+  scheduleHourlyNotifications,
+  cancelHourlyNotifications,
+  showTestNotification as showNativeTestNotification,
+} from '../services/nativeNotificationService';
 
 const SettingsScreen: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -73,7 +79,16 @@ const SettingsScreen: React.FC = () => {
 
   const handleTestNotification = async () => {
     console.log('🧪 User clicked Test Notification button');
-    const result = await sendTestNotification();
+
+    let result;
+    if (isNativePlatform()) {
+      console.log('📱 Using native notifications');
+      result = await showNativeTestNotification('Are you doing what\'s right? If not, use the 5 second rule!');
+    } else {
+      console.log('🌐 Using web notifications');
+      result = await sendTestNotification();
+    }
+
     setTestResult(result);
 
     // Clear the result after 5 seconds
@@ -86,15 +101,34 @@ const SettingsScreen: React.FC = () => {
     await updateSettings({ hourlyNotificationsEnabled: enabled });
 
     if (enabled) {
-      const config = {
-        startTime: settings.hourlyNotificationStartTime || '07:00',
-        endTime: settings.hourlyNotificationEndTime || '21:00',
-        message: settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!',
-      };
-      await startHourlyNotifications(config);
-      updateNextNotificationTime(config);
+      const startTime = settings.hourlyNotificationStartTime || '07:00';
+      const endTime = settings.hourlyNotificationEndTime || '21:00';
+      const message = settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!';
+
+      if (isNativePlatform()) {
+        console.log('📱 Scheduling native notifications');
+        const [startHour] = startTime.split(':').map(Number);
+        const [endHour] = endTime.split(':').map(Number);
+
+        await scheduleHourlyNotifications({
+          startHour,
+          endHour,
+          message,
+        });
+      } else {
+        console.log('🌐 Starting web notifications');
+        const config = { startTime, endTime, message };
+        await startHourlyNotifications(config);
+        updateNextNotificationTime(config);
+      }
     } else {
-      stopHourlyNotifications();
+      if (isNativePlatform()) {
+        console.log('📱 Cancelling native notifications');
+        await cancelHourlyNotifications();
+      } else {
+        console.log('🌐 Stopping web notifications');
+        stopHourlyNotifications();
+      }
       setNextNotificationTime(null);
     }
   };
@@ -103,14 +137,21 @@ const SettingsScreen: React.FC = () => {
     await updateSettings({ [field]: value });
 
     if (settings.hourlyNotificationsEnabled) {
-      const config = {
-        startTime: field === 'hourlyNotificationStartTime' ? value : (settings.hourlyNotificationStartTime || '07:00'),
-        endTime: field === 'hourlyNotificationEndTime' ? value : (settings.hourlyNotificationEndTime || '21:00'),
-        message: settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!',
-      };
-      stopHourlyNotifications();
-      await startHourlyNotifications(config);
-      updateNextNotificationTime(config);
+      const startTime = field === 'hourlyNotificationStartTime' ? value : (settings.hourlyNotificationStartTime || '07:00');
+      const endTime = field === 'hourlyNotificationEndTime' ? value : (settings.hourlyNotificationEndTime || '21:00');
+      const message = settings.hourlyNotificationMessage || 'Are you doing what\'s right? If not, use the 5 second rule!';
+
+      if (isNativePlatform()) {
+        const [startHour] = startTime.split(':').map(Number);
+        const [endHour] = endTime.split(':').map(Number);
+        await cancelHourlyNotifications();
+        await scheduleHourlyNotifications({ startHour, endHour, message });
+      } else {
+        const config = { startTime, endTime, message };
+        stopHourlyNotifications();
+        await startHourlyNotifications(config);
+        updateNextNotificationTime(config);
+      }
     }
   };
 
@@ -118,13 +159,19 @@ const SettingsScreen: React.FC = () => {
     await updateSettings({ hourlyNotificationMessage: message });
 
     if (settings.hourlyNotificationsEnabled) {
-      const config = {
-        startTime: settings.hourlyNotificationStartTime || '07:00',
-        endTime: settings.hourlyNotificationEndTime || '21:00',
-        message: message,
-      };
-      stopHourlyNotifications();
-      await startHourlyNotifications(config);
+      const startTime = settings.hourlyNotificationStartTime || '07:00';
+      const endTime = settings.hourlyNotificationEndTime || '21:00';
+
+      if (isNativePlatform()) {
+        const [startHour] = startTime.split(':').map(Number);
+        const [endHour] = endTime.split(':').map(Number);
+        await cancelHourlyNotifications();
+        await scheduleHourlyNotifications({ startHour, endHour, message });
+      } else {
+        const config = { startTime, endTime, message };
+        stopHourlyNotifications();
+        await startHourlyNotifications(config);
+      }
     }
   };
 
@@ -556,7 +603,7 @@ const SettingsScreen: React.FC = () => {
           <p className="philosophy-quote">
             "5, 4, 3, 2, 1... GO"
           </p>
-          <p className="version">v12-31-1542</p>
+          <p className="version">v12-31-1600</p>
           {fcmToken && (
             <p className="fcm-status">Push notifications enabled</p>
           )}
